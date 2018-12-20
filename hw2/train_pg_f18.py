@@ -5,12 +5,12 @@ Adapted for CS294-112 Fall 2018 by Michael Chang and Soroush Nasiriany
 """
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 import gym
 import logz
 import os
 import time
 import inspect
-import sys
 from multiprocessing import Process
 
 # ============================================================================================ #
@@ -163,7 +163,7 @@ class Agent(object):
         else:
             # Added: continous forward pass
             sy_mean = build_mlp(sy_ob_no, self.ac_dim, "nn_continuous", self.n_layers, self.size)
-            sy_logstd = tf.get_variable("nn_continuous_logstd", self.ac_dim, datatype=tf.float32)
+            sy_logstd = tf.get_variable("nn_logstd", shape=[self.ac_dim], dtype=tf.float32)
             return (sy_mean, sy_logstd)
 
     # ========================================================================================#
@@ -207,7 +207,7 @@ class Agent(object):
             # ]
             #
             # sy_logstd = [stddev 0, stddev 1]
-            sy_sampled_ac = sy_mean + (tf.random.normal(sy_mean.shape) * tf.exp(sy_logstd))
+            sy_sampled_ac = sy_mean + tf.multiply(tf.random.normal(tf.shape(sy_mean)), tf.exp(sy_logstd))
 
         return sy_sampled_ac
 
@@ -247,20 +247,10 @@ class Agent(object):
         else:
             # Added: log_prob for continuous case (pdf for gaussian)
             sy_mean, sy_logstd = policy_parameters
-            sy_variance = tf.square(tf.exp(sy_logstd))
+            sy_std = tf.exp(sy_logstd)
 
-            # 1/sqrt(2pi * variance)
-            z = tf.multiply(2 * np.pi, sy_variance)
-            z = tf.sqrt(z)
-
-            # -0.5 * ((x - mean)^2) / (variance)
-            arg = -0.5 * tf.subtract(sy_ac_na, sy_mean)
-            arg = tf.square(arg)
-            arg = tf.div(arg, sy_variance)
-
-            # 1/z * e^arg
-            sy_prob_n = tf.divide(tf.exp(arg), z)
-            sy_logprob_n = -tf.log(sy_prob_n)
+            dist = tfp.distributions.MultivariateNormalDiag(loc=sy_mean, scale_diag=sy_std)
+            sy_logprob_n = -dist.log_prob(sy_ac_na)
 
         return sy_logprob_n
 
