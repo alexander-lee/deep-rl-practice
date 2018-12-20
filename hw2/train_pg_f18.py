@@ -48,7 +48,6 @@ def build_mlp(input_placeholder, output_size, scope, n_layers, size, activation=
             units=size,
             activation=activation)
 
-        # TODO: Might be n_layers - 1
         for _ in range(n_layers - 1):
             prev_layer = tf.layers.dense(
                 inputs=prev_layer,
@@ -197,7 +196,6 @@ class Agent(object):
         if self.discrete:
             sy_logits_na = policy_parameters
             # Added: sy_sampled_ac for discrete case
-            # TODO: might need to log logits
             sy_sampled_ac = tf.squeeze(tf.random.multinomial(sy_logits_na, 1), axis=[1])
         else:
             # Added: sy_sampled_ac for continuous case
@@ -455,7 +453,7 @@ class Agent(object):
                 T = trajectory.shape[0]
                 flipped_trajectory = reversed(trajectory.tolist())
                 discounted_rewards = [(self.gamma ** (T - t)) * re for (t, re) in enumerate(flipped_trajectory, 1)]
-                q_t = np.flip(np.cumsum(np.asarray(discounted_rewards)))
+                q_t = np.flip(np.cumsum(np.asarray(discounted_rewards)), axis=0)
                 q_n = np.concatenate((q_n, q_t))
         else:
             q_n = []
