@@ -19,4 +19,4 @@
 ![LunarLander](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw2/LunarLanderContinous.png?raw=true)
 
 ### Half Cheetah with Different Batches and Different Learning Rates
-![HalfCheetah](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw2/HalfCheetah_Batch_Rate_Comparison.png?raw=true)
+![HalfCheetah](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw2/HalfCheetah_Batch_LearningRate_Comparison.png?raw=true)
