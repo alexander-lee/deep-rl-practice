@@ -1,6 +1,6 @@
-# CS294-112 HW 2: Policy Gradient
+# HW 2: Policy Gradient with Baselines
 
-Dependencies:
+### Dependencies:
  * Python **3.5**
  * Numpy version **1.14.5**
  * TensorFlow version **1.10.5**
@@ -9,8 +9,14 @@ Dependencies:
  * seaborn
  * Box2D==**2.3.2**
 
-Before doing anything, first replace `gym/envs/box2d/lunar_lander.py` with the provided `lunar_lander.py` file.
+### CartPole using Small Batches (without Baselines)
+![CartPoleSmall](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw2/CartPole_SmallBatch.png?raw=true)
 
-The only file that you need to look at is `train_pg_f18.py`, which you will implement.
+### CartPole using Large Batches (without Baselines)
+![CartPoleLarge](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw2/CartPole_LargeBatch.png?raw=true)
 
-See the [HW2 PDF](http://rail.eecs.berkeley.edu/deeprlcourse/static/homeworks/hw2.pdf) for further instructions.
+### Lunar Lander (Continuous)
+![LunarLander](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw2/LunarLanderContinous.png?raw=true)
+
+### Half Cheetah with Different Batches and Different Learning Rates
+![HalfCheetah](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw2/HalfCheetah_Batch_Rate_Comparison.png?raw=true)
