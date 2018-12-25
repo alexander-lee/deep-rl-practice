@@ -36,9 +36,26 @@ def build_mlp(input_placeholder, output_size, scope, n_layers, size, activation=
 
         Hint: use tf.layers.dense
     """
-    # YOUR HW2 CODE HERE
-    raise NotImplementedError
-    return output_placeholder
+    # Added: MLP initializer
+    with tf.variable_scope(scope):
+        # First Layer
+        prev_layer = tf.layers.dense(
+            inputs=input_placeholder,
+            units=size,
+            activation=activation)
+
+        for _ in range(n_layers - 1):
+            prev_layer = tf.layers.dense(
+                inputs=prev_layer,
+                units=size,
+                activation=activation)
+
+        output_layer = tf.layers.dense(
+            inputs=prev_layer,
+            units=output_size,
+            activation=output_activation)
+
+        return output_layer
 
 
 def pathlength(path):
@@ -101,8 +118,8 @@ class Agent(object):
             sy_ac_na = tf.placeholder(shape=[None], name="ac", dtype=tf.int32)
         else:
             sy_ac_na = tf.placeholder(shape=[None, self.ac_dim], name="ac", dtype=tf.float32)
-        # YOUR HW2 CODE HERE
-        sy_adv_n = None
+        # Added: Set sy_adv_n placeholder
+        sy_adv_n = tf.placeholder(shape=[None], name='adv', dtype=tf.float32)
         return sy_ob_no, sy_ac_na, sy_adv_n
 
     def policy_forward_pass(self, sy_ob_no):
@@ -130,15 +147,14 @@ class Agent(object):
                 Pass in self.n_layers for the 'n_layers' argument, and
                 pass in self.size for the 'size' argument.
         """
-        raise NotImplementedError
         if self.discrete:
-            # YOUR_HW2 CODE_HERE
-            sy_logits_na = None
+            # Added: discrete forward pass
+            sy_logits_na = build_mlp(sy_ob_no, self.ac_dim, "nn_discrete", self.n_layers, self.size)
             return sy_logits_na
         else:
-            # YOUR_HW2 CODE_HERE
-            sy_mean = None
-            sy_logstd = None
+            # Added: continous forward pass
+            sy_mean = build_mlp(sy_ob_no, self.ac_dim, "nn_continuous", self.n_layers, self.size)
+            sy_logstd = tf.get_variable("nn_logstd", shape=[self.ac_dim], dtype=tf.float32)
             return (sy_mean, sy_logstd)
 
     def sample_action(self, policy_parameters):
@@ -165,15 +181,22 @@ class Agent(object):
 
                  This reduces the problem to just sampling z. (Hint: use tf.random_normal!)
         """
-        raise NotImplementedError
         if self.discrete:
             sy_logits_na = policy_parameters
-            # YOUR_HW2 CODE_HERE
-            sy_sampled_ac = None
+            # Added: sy_sampled_ac for discrete case
+            sy_sampled_ac = tf.squeeze(tf.random.multinomial(sy_logits_na, 1), axis=[1])
         else:
+            # Added: sy_sampled_ac for continuous case
             sy_mean, sy_logstd = policy_parameters
-            # YOUR_HW2 CODE_HERE
-            sy_sampled_ac = None
+
+            # sy_mean = [
+            #  [mean 0 for batch 0, mean 1 for batch 0, ...]
+            #  [mean 0 for batch 1, mean 1 for batch 1, ...]
+            # ]
+            #
+            # sy_logstd = [stddev 0, stddev 1]
+            sy_sampled_ac = sy_mean + tf.multiply(tf.random.normal(tf.shape(sy_mean)), tf.exp(sy_logstd))
+
         return sy_sampled_ac
 
     def get_log_prob(self, policy_parameters, sy_ac_na):
@@ -197,15 +220,21 @@ class Agent(object):
                 For the discrete case, use the log probability under a categorical distribution.
                 For the continuous case, use the log probability under a multivariate gaussian.
         """
-        raise NotImplementedError
         if self.discrete:
             sy_logits_na = policy_parameters
-            # YOUR_HW2 CODE_HERE
-            sy_logprob_n = None
+            # Added: log_prob for discrete case
+            sy_logprob_n = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                labels=sy_ac_na,
+                logits=sy_logits_na
+            )
         else:
+            # Added: log_prob for continuous case (pdf for gaussian)
             sy_mean, sy_logstd = policy_parameters
-            # YOUR_HW2 CODE_HERE
-            sy_logprob_n = None
+            sy_std = tf.exp(sy_logstd)
+
+            dist = tfp.distributions.MultivariateNormalDiag(loc=sy_mean, scale_diag=sy_std)
+            sy_logprob_n = -dist.log_prob(sy_ac_na)
+
         return sy_logprob_n
 
     def build_computation_graph(self):
@@ -278,8 +307,8 @@ class Agent(object):
                 env.render()
                 time.sleep(0.1)
             obs.append(ob)
-            raise NotImplementedError
-            ac = None # YOUR HW2 CODE HERE
+            # Added: sampled action
+            ac = self.sess.run(self.sy_sampled_ac, feed_dict={self.sy_ob_no: np.expand_dims(ob, axis=0)})
             ac = ac[0]
             acs.append(ac)
             ob, rew, done, _ = env.step(ac)
@@ -333,8 +362,10 @@ class Agent(object):
         adv_n = None
 
         if self.normalize_advantages:
-            raise NotImplementedError
-            adv_n = None # YOUR_HW2 CODE_HERE
+            # On the next line, implement a trick which is known empirically to reduce variance
+            # in policy gradient methods: normalize adv_n to have mean zero and std=1.
+            # Added: advantage normalization
+            adv_n = (adv_n - np.mean(adv_n)) / np.std(adv_n)
         return adv_n
 
     def update_critic(self, ob_no, next_ob_no, re_n, terminal_n):

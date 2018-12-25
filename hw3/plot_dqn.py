@@ -49,13 +49,25 @@ the --legend flag and then provide a title for each logdir.
 """
 
 
-def plot_data(data, value="AverageReturn", time="Iteration"):
+def plot_data(data, time="Iteration", values=["AverageReturn"], title=None, xlabel=None, ylabel=None, hide_legend=True):
     if isinstance(data, list):
         data = pd.concat(data, ignore_index=True)
 
     sns.set(style="darkgrid", font_scale=1)
-    sns.tsplot(data=data, time=time, value=value, unit="Unit", condition="Condition")
-    plt.legend(loc='best').draggable()
+
+    for value in values:
+        axes = sns.lineplot(data=data, x=time, y=value, label=value)
+
+    if title is not None:
+        axes.set_title(title)
+    if xlabel is not None:
+        axes.set_xlabel(xlabel)
+    if ylabel is not None:
+        axes.set_ylabel(ylabel)
+
+    if hide_legend:
+        axes.get_legend().remove()
+
     plt.show()
 
 
@@ -92,6 +104,9 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('logdir', nargs='*')
+    parser.add_argument('--title')
+    parser.add_argument('--xlabel')
+    parser.add_argument('--ylabel')
     parser.add_argument('--legend', nargs='*')
     parser.add_argument('--time', default='Iteration')
     parser.add_argument('--value', default='AverageReturn', nargs='*')
@@ -115,8 +130,16 @@ def main():
         values = args.value
     else:
         values = [args.value]
-    for value in values:
-        plot_data(data, value=value, time=args.time)
+
+    plot_data(
+        data,
+        time=args.time,
+        values=values,
+        title=args.title,
+        xlabel=args.xlabel,
+        ylabel=args.ylabel,
+        hide_legend=len(values) == 1 and len(args.logdir) == 1
+    )
 
 
 if __name__ == "__main__":

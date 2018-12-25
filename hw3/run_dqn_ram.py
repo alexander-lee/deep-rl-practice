@@ -70,10 +70,8 @@ def atari_learn(env,
 
     if not (osp.exists(data_path)):
         os.makedirs(data_path)
-    logdir = 'dqn_LunarLander-v2' + time.strftime("%d-%m-%Y_%H-%M-%S")
+    logdir = 'dqn_' + env.spec.id + '_'  + time.strftime("%d-%m-%Y_%H-%M-%S")
     logdir = osp.join(data_path, logdir)
-    if not(osp.exists(logdir)):
-        os.makedirs(logdir)
 
     dqn.learn(
         env,

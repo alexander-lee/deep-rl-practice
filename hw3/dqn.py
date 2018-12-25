@@ -37,7 +37,8 @@ class QLearner(object):
         grad_norm_clipping=10,
         rew_file=None,
         double_q=True,
-        lander=False
+        lander=False,
+        logdir=None
     ):
         """Run Deep Q-learning algorithm.
 
@@ -91,6 +92,8 @@ class QLearner(object):
         double_q: bool
             If True, then use double Q-learning to compute target values. Otherwise, use vanilla DQN.
             https://papers.nips.cc/paper/3964-double-q-learning.pdf
+        logdir: str
+            The logging directory
         """
         assert type(env.observation_space) == gym.spaces.Box
         assert type(env.action_space) == gym.spaces.Discrete
@@ -169,7 +172,7 @@ class QLearner(object):
         # Added: TD-Error and Q function
         # Note: Axis 0 is the Batch Dimension
         q_current = q_func(obs_t_float, self.num_actions, scope='q_func', reuse=False)
-        q_next = q_func(obs_tp1_float, self.num_actions, scope='q_func_target', reuse=False)
+        q_target_next = q_func(obs_tp1_float, self.num_actions, scope='q_func_target', reuse=False)
 
         self.q_pred_ac = tf.argmax(q_current, axis=1)
 
@@ -178,10 +181,10 @@ class QLearner(object):
         # reduce_sum([0, 1, 0] * [q1, q2, q3]) = reduce_sum([0, q2, 0]) = q2
         q_pred = tf.reduce_sum(q_current * tf.one_hot(self.act_t_ph, self.num_actions), axis=1)
 
-        target_ac = self.q_pred_ac if double_q else tf.argmax(q_next, axis=1)
+        target_ac = self.q_pred_ac if double_q else tf.argmax(q_target_next, axis=1)
 
         # If done_mask = 1, return just the reward, otherwise reward + gamma * q(next_state)
-        q_target = self.rew_t_ph + (1 - self.done_mask_ph) * gamma * tf.reduce_sum(q_next * tf.one_hot(target_ac, self.num_actions), axis=1)
+        q_target = self.rew_t_ph + (1 - self.done_mask_ph) * gamma * tf.reduce_sum(q_target_next * tf.one_hot(target_ac, self.num_actions), axis=1)
 
         self.total_error = tf.losses.huber_loss(q_target, q_pred)  # tf.reduce_sum(huber_loss(q_pred - q_target))
 
@@ -272,7 +275,7 @@ class QLearner(object):
             # Get action from model
             encoded_obs = self.replay_buffer.encode_recent_observation()
             action = self.session.run(self.q_pred_ac, feed_dict={self.obs_t_ph: np.expand_dims(encoded_obs, axis=0)})
-            action = action[0]  # Returns it with batch_dim = 1
+            action = action[0]  # Returns it with batch_dim = 1, so we unwrap it by accessing the first element
 
         # Step and store experience in replay buffer
         obs, reward, done, _ = self.env.step(action)
@@ -365,48 +368,53 @@ class QLearner(object):
         if len(episode_rewards) > 0:
             self.mean_episode_reward = np.mean(episode_rewards[-100:])
 
-        if len(episode_rewards) > 100:
+        if len(episode_rewards) > 100 or self.t % self.log_every_n_steps == 0:
             self.best_mean_episode_reward = max(
                 self.best_mean_episode_reward, self.mean_episode_reward)
 
         if self.t % self.log_every_n_steps == 0 and self.model_initialized:
-            print("================================")
-            print("Timestep: %d" % (self.t,))
-            print("Mean Reward (100 episodes): %f" % self.mean_episode_reward)
-            print("Best Mean Reward: %f" % self.best_mean_episode_reward)
-            print("Episodes: %d" % len(episode_rewards))
-            print("Exploration: %f" % self.exploration.value(self.t))
-            print("Learning Rate: %f" %
-                  self.optimizer_spec.lr_schedule.value(self.t))
-            if self.start_time is not None:
-                print("Running Time: %f" %
-                      ((time.time() - self.start_time) / 60.))
-            print("================================")
-            self.start_time = time.time()
+            # print("================================")
+            # print("Timestep: %d" % (self.t,))
+            # print("Mean Reward (100 episodes): %f" % self.mean_episode_reward)
+            # print("Best Mean Reward: %f" % self.best_mean_episode_reward)
+            # print("Episodes: %d" % len(episode_rewards))
+            # print("Exploration: %f" % self.exploration.value(self.t))
+            # print("Learning Rate: %f" %
+            #       self.optimizer_spec.lr_schedule.value(self.t))
+            # if self.start_time is not None:
+            #     print("Running Time: %f" %
+            #           ((time.time() - self.start_time) / 60.))
+            # print("================================")
+            # sys.stdout.flush()
 
+            print("================ Timestep %d ================" % self.t)
             logz.log_tabular("Timestep", self.t)
-            logz.log_tabular("MeanReward (100 Episodes)", self.mean_episode_reward)
+            logz.log_tabular("MeanReward", self.mean_episode_reward)
             logz.log_tabular("BestMeanReward", self.best_mean_episode_reward)
             logz.log_tabular("Episodes", len(episode_rewards))
             logz.log_tabular("Exploration", self.exploration.value(self.t))
-            logz.log_tabular("Learning Rate", self.optimizer_spec.lr_schedule.value(self.t))
-            sys.stdout.flush()
+            logz.log_tabular("LearningRate", self.optimizer_spec.lr_schedule.value(self.t))
+            logz.dump_tabular()
+            # logz.pickle_tf_vars()
+
+            self.start_time = time.time()
 
             # with open(self.rew_file, 'wb') as f:
             #     pickle.dump(episode_rewards, f, pickle.HIGHEST_PROTOCOL)
 
 
-def setup_logger(logdir, locals_):
+def setup_logger(logdir, env, locals_):
     # Configure output directory for logging
     logz.configure_output_dir(logdir)
-    # Log experimental parameters
-    args = inspect.getargspec(learn)[0]
-    params = {k: locals_[k] if k in locals_ else None for k in args}
+    # Log experiment title based on env
+    params = {
+        "exp_name": env.spec.id
+    }
     logz.save_params(params)
 
 
 def learn(*args, **kwargs):
-    setup_logger(kwargs['logdir'], locals())
+    setup_logger(kwargs['logdir'], kwargs['env'], locals())
 
     alg = QLearner(*args, **kwargs)
     while not alg.stopping_criterion_met():
