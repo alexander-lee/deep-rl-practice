@@ -1,24 +1,31 @@
 import argparse
 import gym
 from gym import wrappers
+import os
 import os.path as osp
 import random
 import numpy as np
+import time
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
 
 import dqn
 from dqn_utils import *
 
+
 def lander_model(obs, num_actions, scope, reuse=False):
     with tf.variable_scope(scope, reuse=reuse):
         out = obs
         with tf.variable_scope("action_value"):
-            out = layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
-            out = layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
-            out = layers.fully_connected(out, num_outputs=num_actions, activation_fn=None)
+            out = layers.fully_connected(
+                out, num_outputs=64, activation_fn=tf.nn.relu)
+            out = layers.fully_connected(
+                out, num_outputs=64, activation_fn=tf.nn.relu)
+            out = layers.fully_connected(
+                out, num_outputs=num_actions, activation_fn=None)
 
         return out
+
 
 def lander_optimizer():
     return dqn.OptimizerSpec(
@@ -27,6 +34,7 @@ def lander_optimizer():
         kwargs={}
     )
 
+
 def lander_stopping_criterion(num_timesteps):
     def stopping_criterion(env, t):
         # notice that here t is the number of steps of the wrapped env,
@@ -34,13 +42,16 @@ def lander_stopping_criterion(num_timesteps):
         return get_wrapper_by_name(env, "Monitor").get_total_steps() >= num_timesteps
     return stopping_criterion
 
+
 def lander_exploration_schedule(num_timesteps):
     return PiecewiseSchedule(
         [
             (0, 1),
+            # (num_timesteps * 0.1, 0.1),
             (num_timesteps * 0.1, 0.02),
         ], outside_value=0.02
     )
+
 
 def lander_kwargs():
     return {
@@ -57,14 +68,17 @@ def lander_kwargs():
         'lander': True
     }
 
-def lander_learn(env,
-                 session,
-                 num_timesteps,
-                 seed):
 
-    optimizer = lander_optimizer()
-    stopping_criterion = lander_stopping_criterion(num_timesteps)
-    exploration_schedule = lander_exploration_schedule(num_timesteps)
+def lander_learn(env, session, num_timesteps, seed):
+    # Initialize Logging Dir
+    data_path = osp.join(osp.dirname(osp.realpath(__file__)), 'data')
+
+    if not (osp.exists(data_path)):
+        os.makedirs(data_path)
+    logdir = 'dqn_LunarLander-v2' + time.strftime("%d-%m-%Y_%H-%M-%S")
+    logdir = osp.join(data_path, logdir)
+    if not(osp.exists(logdir)):
+        os.makedirs(logdir)
 
     dqn.learn(
         env=env,
@@ -72,14 +86,17 @@ def lander_learn(env,
         exploration=lander_exploration_schedule(num_timesteps),
         stopping_criterion=lander_stopping_criterion(num_timesteps),
         double_q=True,
+        logdir=logdir,
         **lander_kwargs()
     )
     env.close()
+
 
 def set_global_seeds(i):
     tf.set_random_seed(i)
     np.random.seed(i)
     random.seed(i)
+
 
 def get_session():
     tf.reset_default_graph()
@@ -92,6 +109,7 @@ def get_session():
     session = tf.Session(config=tf_config)
     return session
 
+
 def get_env(seed):
     env = gym.make('LunarLander-v2')
 
@@ -103,14 +121,16 @@ def get_env(seed):
 
     return env
 
+
 def main():
     # Run training
-    seed = 4565 # you may want to randomize this
+    seed = 4565  # you may want to randomize this
     print('random seed = %d' % seed)
     env = get_env(seed)
     session = get_session()
     set_global_seeds(seed)
     lander_learn(env, session, num_timesteps=500000, seed=seed)
+
 
 if __name__ == "__main__":
     main()
