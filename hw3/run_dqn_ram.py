@@ -70,11 +70,11 @@ def atari_learn(env,
 
     if not (osp.exists(data_path)):
         os.makedirs(data_path)
-    logdir = 'dqn_' + env.spec.id + '_'  + time.strftime("%d-%m-%Y_%H-%M-%S")
+    logdir = 'dqn_' + env.spec.id + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
     logdir = osp.join(data_path, logdir)
 
     dqn.learn(
-        env,
+        env=env,
         q_func=atari_model,
         optimizer_spec=optimizer,
         session=session,

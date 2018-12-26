@@ -83,7 +83,7 @@ def lander_learn(env, session, num_timesteps, seed):
         session=session,
         exploration=lander_exploration_schedule(num_timesteps),
         stopping_criterion=lander_stopping_criterion(num_timesteps),
-        double_q=True,
+        double_q=False,
         logdir=logdir,
         **lander_kwargs()
     )

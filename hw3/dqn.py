@@ -171,25 +171,33 @@ class QLearner(object):
 
         # Added: TD-Error and Q function
         # Note: Axis 0 is the Batch Dimension
-        q_current = q_func(obs_t_float, self.num_actions, scope='q_func', reuse=False)
-        q_target_next = q_func(obs_tp1_float, self.num_actions, scope='q_func_target', reuse=False)
+        with tf.name_scope("q_funcs"):
+            q_current = q_func(obs_t_float, self.num_actions, scope='q_func', reuse=False)
+            q_target_next = q_func(obs_tp1_float, self.num_actions, scope='q_func_target', reuse=False)
 
+            q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func')
+            target_q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func_target')
+
+        # Operator to get best action from Q
         self.q_pred_ac = tf.argmax(q_current, axis=1)
 
-        # Takes q-value from current action performed
-        # one_hot will mask out the targeted action
-        # reduce_sum([0, 1, 0] * [q1, q2, q3]) = reduce_sum([0, q2, 0]) = q2
-        q_pred = tf.reduce_sum(q_current * tf.one_hot(self.act_t_ph, self.num_actions), axis=1)
+        with tf.name_scope("error_func"):
+            if double_q:
+                target_ac = tf.argmax(q_func(obs_tp1_float, self.num_actions, scope='q_func', reuse=True), axis=1)
+            else:
+                target_ac = tf.argmax(q_target_next, axis=1)
 
-        target_ac = self.q_pred_ac if double_q else tf.argmax(q_target_next, axis=1)
+            # Takes q-value from current action performed
+            # one_hot will mask out the targeted action
+            # reduce_sum([0, 1, 0] * [q1, q2, q3]) = reduce_sum([0, q2, 0]) = q2
+            q_pred = tf.reduce_sum(q_current * tf.one_hot(self.act_t_ph, self.num_actions), axis=1)
 
-        # If done_mask = 1, return just the reward, otherwise reward + gamma * q(next_state)
-        q_target = self.rew_t_ph + (1 - self.done_mask_ph) * gamma * tf.reduce_sum(q_target_next * tf.one_hot(target_ac, self.num_actions), axis=1)
+            # If done_mask = 1, return just the reward, otherwise reward + gamma * q(next_state)
+            q_target = self.rew_t_ph + (1 - self.done_mask_ph) * gamma * \
+                tf.reduce_sum(q_target_next * tf.one_hot(target_ac, self.num_actions), axis=1)
 
-        self.total_error = tf.losses.huber_loss(q_target, q_pred)  # tf.reduce_sum(huber_loss(q_pred - q_target))
-
-        q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func')
-        target_q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func_target')
+            # tf.stop_gradient says don't compute the gradient for this variable
+            self.total_error = tf.losses.huber_loss(tf.stop_gradient(q_target), q_pred)  # tf.reduce_sum(huber_loss(q_pred - q_target))
 
         ######
 
