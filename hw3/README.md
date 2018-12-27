@@ -1,6 +1,6 @@
-# CS294-112 HW 3: Q-Learning
+# HW 3: Deep Q-Learning & Actor-Critic
 
-Dependencies:
+### Dependencies
  * Python **3.5**
  * Numpy version **1.14.5**
  * TensorFlow version **1.10.5**
@@ -11,10 +11,29 @@ Dependencies:
  * OpenCV
  * ffmpeg
 
-Before doing anything, first replace `gym/envs/box2d/lunar_lander.py` with the provided `lunar_lander.py` file.
+## Deep Q-Learning
+### Lunar Lander
+![LunarLander](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw3/graphs/LunarLander.png?raw=true)
+‎
 
-The only files that you need to look at are `dqn.py` and `train_ac_f18.py`, which you will implement.
+### Pong
+‎
 
-See the [HW3 PDF](http://rail.eecs.berkeley.edu/deeprlcourse/static/homeworks/hw3.pdf) for further instructions.
+### Double DQN vs. Normal DQN
+![Double DQN vs. Normal DQN](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw3/graphs/LunarLander_Normal_vs_Double_DQN.png?raw=true)
 
-The starter code was based on an implementation of Q-learning for Atari generously provided by Szymon Sidor from OpenAI.
+
+## Actor Critic
+### Comparing different Target Update Rates with Number of Gradient Steps
+![Actor Critic Target Update Comparison](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw3/graphs/ActorCritic_TargetGradientUpdate_Comparison.png?raw=true)
+
+* Each line is labeled `a_b` where `a` is the number of target updates, and `b` is the number of gradient steps per target update.
+* From this graph, it seemed like `10_10` performed the best.
+‎
+
+### Inverted Pendulum (Actor Critic vs. Policy Gradient)
+![InvertedPendulum](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw3/graphs/InvertedPendulum_AC_PG.png?raw=true)
+‎
+
+### Half Cheetah (Actor Critic vs. Policy Gradient)
+![HalfCheetah](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw3/graphs/HalfCheetah_AC_PG.png?raw=true)

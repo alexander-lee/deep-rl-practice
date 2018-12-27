@@ -202,9 +202,11 @@ class Agent(object):
             # ]
             #
             # sy_logstd = [stddev 0, stddev 1]
-            sy_sampled_ac = sy_mean + \
-                tf.multiply(tf.random.normal(
-                    tf.shape(sy_mean)), tf.exp(sy_logstd))
+            sy_sampled_ac = tf.random_normal(
+                shape=tf.shape(sy_mean),
+                mean=sy_mean,
+                stddev=tf.exp(sy_logstd)
+            )
 
         return sy_sampled_ac
 
@@ -236,14 +238,16 @@ class Agent(object):
                 labels=sy_ac_na,
                 logits=sy_logits_na
             )
+            # Already gives it in negative log likelihood, and since we make it negative in
+            # 'build_computation_graph', we undo it here first
+            sy_logprob_n = -sy_logprob_n
         else:
             # Added: log_prob for continuous case (pdf for gaussian)
             sy_mean, sy_logstd = policy_parameters
             sy_std = tf.exp(sy_logstd)
 
-            dist = tfp.distributions.MultivariateNormalDiag(
-                loc=sy_mean, scale_diag=sy_std)
-            sy_logprob_n = -dist.log_prob(sy_ac_na)
+            dist = tfp.distributions.MultivariateNormalDiag(loc=sy_mean, scale_diag=sy_std)
+            sy_logprob_n = dist.log_prob(sy_ac_na)
 
         return sy_logprob_n
 
@@ -279,12 +283,10 @@ class Agent(object):
 
         # We can also compute the logprob of the actions that were actually taken by the policy
         # This is used in the loss function.
-        self.sy_logprob_n = self.get_log_prob(
-            self.policy_parameters, self.sy_ac_na)
+        self.sy_logprob_n = self.get_log_prob(self.policy_parameters, self.sy_ac_na)
 
-        actor_loss = tf.reduce_sum(-self.sy_logprob_n * self.sy_adv_n)
-        self.actor_update_op = tf.train.AdamOptimizer(
-            self.learning_rate).minimize(actor_loss)
+        negative_loglikelihood = tf.reduce_sum(-self.sy_logprob_n * self.sy_adv_n)
+        self.actor_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(negative_loglikelihood)
 
         # define the critic
         self.critic_prediction = tf.squeeze(build_mlp(
@@ -293,12 +295,9 @@ class Agent(object):
                                             "nn_critic",
                                             n_layers=self.n_layers,
                                             size=self.size))
-        self.sy_target_n = tf.placeholder(
-            shape=[None], name="critic_target", dtype=tf.float32)
-        self.critic_loss = tf.losses.mean_squared_error(
-            self.sy_target_n, self.critic_prediction)
-        self.critic_update_op = tf.train.AdamOptimizer(
-            self.learning_rate).minimize(self.critic_loss)
+        self.sy_target_n = tf.placeholder(shape=[None], name="critic_target", dtype=tf.float32)
+        self.critic_loss = tf.losses.mean_squared_error(self.sy_target_n, self.critic_prediction)
+        self.critic_update_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.critic_loss)
 
     def sample_trajectories(self, itr, env):
         # Collect paths until we have enough timesteps
@@ -324,8 +323,7 @@ class Agent(object):
                 time.sleep(0.1)
             obs.append(ob)
             # Added: sampled action
-            ac = self.sess.run(self.sy_sampled_ac, feed_dict={
-                               self.sy_ob_no: np.expand_dims(ob, axis=0)})
+            ac = self.sess.run(self.sy_sampled_ac, feed_dict={self.sy_ob_no: [ob]})
             ac = ac[0]
             acs.append(ac)
             ob, rew, done, _ = env.step(ac)
@@ -373,12 +371,12 @@ class Agent(object):
         # otherwise the values will grow without bound.
 
         # Added: Advantage estimation using the critic
-        v_current_n = self.sess.run(
-            self.critic_prediction, feed_dict={self.sy_ob_no: ob_no})
         v_next_n = self.sess.run(self.critic_prediction, feed_dict={
                                  self.sy_ob_no: next_ob_no})
 
-        q_n = re_n + (1 - terminal_n) * (self.gamma * v_next_n)
+        q_n = re_n + (1 - terminal_n) * self.gamma * v_next_n
+        v_current_n = self.sess.run(
+            self.critic_prediction, feed_dict={self.sy_ob_no: ob_no})
         adv_n = q_n - v_current_n
 
         if self.normalize_advantages:
@@ -424,7 +422,7 @@ class Agent(object):
             target_v_n = re_n + (1 - terminal_n) * self.gamma * v_next_n
 
             for j in range(self.num_grad_steps_per_target_update):
-                self.sess.run((self.critic_update_op, self.critic_loss), feed_dict={
+                _, loss = self.sess.run((self.critic_update_op, self.critic_loss), feed_dict={
                     self.sy_ob_no: ob_no,
                     self.sy_target_n: target_v_n
                 })
@@ -445,8 +443,7 @@ class Agent(object):
         """
         self.sess.run(
             self.actor_update_op,
-            feed_dict={self.sy_ob_no: ob_no,
-                       self.sy_ac_na: ac_na, self.sy_adv_n: adv_n}
+            feed_dict={self.sy_ob_no: ob_no, self.sy_ac_na: ac_na, self.sy_adv_n: adv_n}
         )
 
 
@@ -545,8 +542,7 @@ def train_AC(
         ob_no = np.concatenate([path["observation"] for path in paths])
         ac_na = np.concatenate([path["action"] for path in paths])
         re_n = np.concatenate([path["reward"] for path in paths])
-        next_ob_no = np.concatenate(
-            [path["next_observation"] for path in paths])
+        next_ob_no = np.concatenate([path["next_observation"] for path in paths])
         terminal_n = np.concatenate([path["terminal"] for path in paths])
 
         # Call tensorflow operations to:
@@ -555,6 +551,7 @@ def train_AC(
         # (3) use the estimated advantage values to update the actor, by calling agent.update_actor
 
         # Added: Actor-Critic Loop
+        # COMPARE WITH AC2
         agent.update_critic(ob_no, next_ob_no, re_n, terminal_n)
         adv_n = agent.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n)
         agent.update_actor(ob_no, ac_na, adv_n)

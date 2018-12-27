@@ -49,12 +49,16 @@ the --legend flag and then provide a title for each logdir.
 """
 
 
-def plot_data(data, value="AverageReturn", time="Iteration"):
+def plot_data(data, value="AverageReturn", time="Iteration", title=None):
     if isinstance(data, list):
         data = pd.concat(data, ignore_index=True)
 
     sns.set(style="darkgrid", font_scale=1)
-    sns.tsplot(data=data, time=time, value=value, unit="Unit", condition="Condition")
+    axes = sns.tsplot(data=data, time=time, value=value, unit="Unit", condition="Condition")
+
+    if title is not None:
+        axes.set_title(title)
+
     plt.legend(loc='best').draggable()
     plt.show()
 
@@ -92,6 +96,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('logdir', nargs='*')
+    parser.add_argument('--title', nargs='*')
     parser.add_argument('--legend', nargs='*')
     parser.add_argument('--time', default='Iteration')
     parser.add_argument('--value', default='AverageReturn', nargs='*')
@@ -115,8 +120,13 @@ def main():
         values = args.value
     else:
         values = [args.value]
-    for value in values:
-        plot_data(data, value=value, time=args.time)
+
+    if args.title is not None and isinstance(args.title, list):
+        titles = args.title
+    else:
+        titles = [args.title]
+    for value, title in zip(values, titles):
+        plot_data(data, value=value, time=args.time, title=title)
 
 
 if __name__ == "__main__":
