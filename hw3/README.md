@@ -17,6 +17,9 @@
 ‎
 
 ### Pong
+#### After ~4000000 Time Steps:
+![PongGame](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw3/graphs/Pong.gif?raw=true)
+![Pong](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw3/graphs/Pong_DQN.png?raw=true)
 ‎
 
 ### Double DQN vs. Normal DQN
