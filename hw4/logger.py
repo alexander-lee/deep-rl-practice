@@ -58,10 +58,12 @@ class LoggerClass(object):
                                         display_name=display_name)
         self._csv_path = os.path.splitext(log_path)[0] + '.csv'
 
-        ### load csv if exists
+        # load csv if exists
         if os.path.exists(self._csv_path):
-            self._tabular = {k: list(v) for k, v in pandas.read_csv(self._csv_path).items()}
-            self._num_dump_tabular_calls = len(tuple(self._tabular.values())[0])
+            self._tabular = {k: list(v) for k, v in pandas.read_csv(
+                self._csv_path).items()}
+            self._num_dump_tabular_calls = len(
+                tuple(self._tabular.values())[0])
 
     def _get_logger(self, name, log_path, lvl=logging.INFO, display_name=None):
         if isinstance(lvl, str):
@@ -129,17 +131,18 @@ class LoggerClass(object):
         if key in self._tabular:
             self._tabular[key].append(val)
         else:
-            self._tabular[key] = [np.nan] * self._num_dump_tabular_calls + [val]
+            self._tabular[key] = [np.nan] * \
+                self._num_dump_tabular_calls + [val]
 
     def dump_tabular(self, print_func=None):
         if len(self._curr_recorded) == 0:
             return ''
 
-        ### reset
+        # reset
         self._curr_recorded = list()
         self._num_dump_tabular_calls += 1
 
-        ### make sure all same length
+        # make sure all same length
         for k, v in self._tabular.items():
             if len(v) == self._num_dump_tabular_calls:
                 pass
@@ -149,14 +152,16 @@ class LoggerClass(object):
                 raise ValueError('key {0} should not have {1} items when {2} calls have been made'.format(
                     k, len(v), self._num_dump_tabular_calls))
 
-        ### print
+        # print
         if print_func is not None:
-            log_str = tabulate(sorted([(k, v[-1]) for k, v in self._tabular.items()], key=lambda kv: kv[0]))
+            log_str = tabulate(
+                sorted([(k, v[-1]) for k, v in self._tabular.items()], key=lambda kv: kv[0]))
             for line in log_str.split('\n'):
                 print_func(line)
 
-        ### write to file
-        tabular_pandas = pandas.DataFrame({k: pandas.Series(v) for k, v in self._tabular.items()})
+        # write to file
+        tabular_pandas = pandas.DataFrame(
+            {k: pandas.Series(v) for k, v in self._tabular.items()})
         tabular_pandas.to_csv(self._csv_path)
 
 

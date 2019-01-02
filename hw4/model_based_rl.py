@@ -83,8 +83,8 @@ class ModelBasedRL(object):
         timeit.start('train policy')
 
         losses = []
-        ### PROBLEM 1
-        ### YOUR CODE HERE
+        # PROBLEM 1
+        # YOUR CODE HERE
         raise NotImplementedError
 
         logger.record_tabular('TrainingLossStart', losses[0])
@@ -115,16 +115,16 @@ class ModelBasedRL(object):
                   predicted states and saves these to the experiment's folder. You do not need to modify this code.
         """
         logger.info('Training policy....')
-        ### PROBLEM 1
-        ### YOUR CODE HERE
+        # PROBLEM 1
+        # YOUR CODE HERE
         raise NotImplementedError
 
         logger.info('Evaluating predictions...')
         for r_num, (states, actions, _, _, _) in enumerate(self._random_dataset.rollout_iterator()):
             pred_states = []
 
-            ### PROBLEM 1
-            ### YOUR CODE HERE
+            # PROBLEM 1
+            # YOUR CODE HERE
             raise NotImplementedError
 
             states = np.asarray(states)
@@ -133,15 +133,17 @@ class ModelBasedRL(object):
             state_dim = states.shape[1]
             rows = int(np.sqrt(state_dim))
             cols = state_dim // rows
-            f, axes = plt.subplots(rows, cols, figsize=(3*cols, 3*rows))
-            f.suptitle('Model predictions (red) versus ground truth (black) for open-loop predictions')
+            f, axes = plt.subplots(rows, cols, figsize=(3 * cols, 3 * rows))
+            f.suptitle(
+                'Model predictions (red) versus ground truth (black) for open-loop predictions')
             for i, (ax, state_i, pred_state_i) in enumerate(zip(axes.ravel(), states.T, pred_states.T)):
                 ax.set_title('state {0}'.format(i))
                 ax.plot(state_i, color='k')
                 ax.plot(pred_state_i, color='r')
             plt.tight_layout()
             plt.subplots_adjust(top=0.90)
-            f.savefig(os.path.join(logger.dir, 'prediction_{0:03d}.jpg'.format(r_num)), bbox_inches='tight')
+            f.savefig(os.path.join(
+                logger.dir, 'prediction_{0:03d}.jpg'.format(r_num)), bbox_inches='tight')
 
         logger.info('All plots saved to folder')
 
@@ -153,13 +155,13 @@ class ModelBasedRL(object):
         self._log(self._random_dataset)
 
         logger.info('Training policy....')
-        ### PROBLEM 2
-        ### YOUR CODE HERE
+        # PROBLEM 2
+        # YOUR CODE HERE
         raise NotImplementedError
 
         logger.info('Evaluating policy...')
-        ### PROBLEM 2
-        ### YOUR CODE HERE
+        # PROBLEM 2
+        # YOUR CODE HERE
         raise NotImplementedError
 
         logger.info('Trained policy')
@@ -181,18 +183,18 @@ class ModelBasedRL(object):
             logger.info('Iteration {0}'.format(itr))
             logger.record_tabular('Itr', itr)
 
-            ### PROBLEM 3
-            ### YOUR CODE HERE
+            # PROBLEM 3
+            # YOUR CODE HERE
             logger.info('Training policy...')
             raise NotImplementedError
 
-            ### PROBLEM 3
-            ### YOUR CODE HERE
+            # PROBLEM 3
+            # YOUR CODE HERE
             logger.info('Gathering rollouts...')
             raise NotImplementedError
 
-            ### PROBLEM 3
-            ### YOUR CODE HERE
+            # PROBLEM 3
+            # YOUR CODE HERE
             logger.info('Appending dataset...')
             raise NotImplementedError
 

@@ -80,7 +80,8 @@ class Dataset(object):
             # ensure the state, action, next_state are of the same dimension
             assert len(self._states[-1]) == len(other_dataset._states[-1])
             assert len(self._actions[-1]) == len(other_dataset._actions[-1])
-            assert len(self._next_states[-1]) == len(other_dataset._next_states[-1])
+            assert len(self._next_states[-1]
+                       ) == len(other_dataset._next_states[-1])
 
         self._states += other_dataset._states
         self._actions += other_dataset._actions
@@ -125,7 +126,7 @@ class Dataset(object):
 
         i = 0
         while i < len(all_indices):
-            indices = all_indices[i:i+batch_size]
+            indices = all_indices[i:i + batch_size]
 
             yield states[indices], actions[indices], next_states[indices], rewards[indices], dones[indices]
 
@@ -156,6 +157,7 @@ class Dataset(object):
 ### Tensorflow ###
 ##################
 
+
 def build_mlp(input_layer,
               output_dim,
               scope,
@@ -171,8 +173,10 @@ def build_mlp(input_layer,
         layer = tf.layers.dense(layer, output_dim, activation=output_activation)
     return layer
 
+
 def normalize(x, mean, std, eps=1e-8):
     return (x - mean) / (std + eps)
+
 
 def unnormalize(x, mean, std):
     return x * std + mean
@@ -180,6 +184,7 @@ def unnormalize(x, mean, std):
 ################
 ### Policies ###
 ################
+
 
 class RandomPolicy(object):
 
@@ -189,4 +194,3 @@ class RandomPolicy(object):
 
     def get_action(self, state):
         return np.random.uniform(self._action_space_low, self._action_space_high)
-
