@@ -15,7 +15,7 @@ class ModelBasedRL(object):
                  env,
                  num_init_random_rollouts=10,
                  max_rollout_length=500,
-                 num_onplicy_iters=10,
+                 num_onpolicy_iters=10,
                  num_onpolicy_rollouts=10,
                  training_epochs=60,
                  training_batch_size=512,
@@ -25,7 +25,7 @@ class ModelBasedRL(object):
                  nn_layers=1):
         self._env = env
         self._max_rollout_length = max_rollout_length
-        self._num_onpolicy_iters = num_onplicy_iters
+        self._num_onpolicy_iters = num_onpolicy_iters
         self._num_onpolicy_rollouts = num_onpolicy_rollouts
         self._training_epochs = training_epochs
         self._training_batch_size = training_batch_size
@@ -88,7 +88,7 @@ class ModelBasedRL(object):
             for batch_num, (states, actions, next_states, _, _) in enumerate(dataset.random_iterator(self._training_batch_size)):
                 loss = self._policy.train_step(states, actions, next_states)
                 losses.append(loss)
-                logger.info('\tLoss: {:.2f}'.format(loss))
+                logger.info('\tLoss: {:.3f}'.format(loss))
 
         logger.record_tabular('TrainingLossStart', losses[0])
         logger.record_tabular('TrainingLossFinal', losses[-1])
@@ -163,14 +163,14 @@ class ModelBasedRL(object):
         self._log(self._random_dataset)
 
         logger.info('Training policy....')
-        # PROBLEM 2
-        # YOUR CODE HERE
-        raise NotImplementedError
+
+        # Added: Call to _train_policy
+        self._train_policy(self._random_dataset)
 
         logger.info('Evaluating policy...')
-        # PROBLEM 2
-        # YOUR CODE HERE
-        raise NotImplementedError
+
+        # Added: Evaluation of trained policy
+        eval_dataset = self._gather_rollouts(self._policy, self._num_onpolicy_rollouts)
 
         logger.info('Trained policy')
         self._log(eval_dataset)

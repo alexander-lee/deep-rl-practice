@@ -82,7 +82,7 @@ class ModelBasedPolicy(object):
         )
 
         pred_diff = utils.unnormalize(normalized_pred_diff, dataset.delta_state_mean, dataset.delta_state_std)
-        next_state_pred = state + pred_diff  # TODO: Could be unnormalize diff then add to normalized state
+        next_state_pred = state + pred_diff
         return next_state_pred
 
     def _setup_training(self, state_ph, next_state_ph, next_state_pred):
@@ -140,10 +140,35 @@ class ModelBasedPolicy(object):
                 (iii) Use tf.random_uniform(...) to generate the random action sequences
 
         """
-        ### PROBLEM 2
-        ### YOUR CODE HERE
-        raise NotImplementedError
+        # Added: Action Selection
 
+        batch_size = self._num_random_action_selection
+        first_actions = None  # Shape: (batch_size, action_dim)
+
+        states = tf.tile(state_ph, [batch_size, 1])
+        seq_costs = np.zeros((batch_size, ), dtype=np.float32)
+
+        # Run this batch-wise for batch_size times
+        for state_idx in range(self._horizon):
+            random_actions = tf.random_uniform(
+                shape=[batch_size, self._action_dim],
+                minval=self._action_space_low,
+                maxval=self._action_space_high
+            )
+            next_states = self._dynamics_func(
+                state=states,
+                action=random_actions,
+                reuse=tf.AUTO_REUSE
+            )
+
+            seq_costs += self._cost_fn(states, random_actions, next_states)
+            states = next_states
+
+            # Update first_actions for the first set of actions generated
+            if state_idx == 0:
+                first_actions = random_actions
+
+        best_action = first_actions[tf.argmin(seq_costs)]
         return best_action
 
     def _setup_graph(self):
@@ -159,9 +184,8 @@ class ModelBasedPolicy(object):
         next_state_pred = self._dynamics_func(state_ph, action_ph, reuse=tf.AUTO_REUSE)
         loss, optimizer = self._setup_training(state_ph, next_state_ph, next_state_pred)
 
-        ### PROBLEM 2
-        ### YOUR CODE HERE
-        best_action = None
+        # Added: Call to _setup_action_selection
+        best_action = self._setup_action_selection(state_ph)
 
         sess.run(tf.global_variables_initializer())
 
@@ -175,8 +199,8 @@ class ModelBasedPolicy(object):
         returns:
             loss: the loss from performing gradient descent
         """
-        # Added: Implementation for train_step
-        _, loss = self._sess.run([self._optimizer, self._loss], feed_dict={
+        # Added: Use session to perform single step of optimizer
+        _, loss = self._sess.run([self._optimizer, self._loss], {
             self._state_ph: states,
             self._action_ph: actions,
             self._next_state_ph: next_states
@@ -197,7 +221,7 @@ class ModelBasedPolicy(object):
         assert np.shape(state) == (self._state_dim,)
         assert np.shape(action) == (self._action_dim,)
 
-        # Added: Prediction implementation
+        # Added: Use session to find prediction
         next_state_pred = self._sess.run(self._dynamics_func(
             tf.expand_dims(state, axis=0),
             tf.expand_dims(action, axis=0),
@@ -217,9 +241,18 @@ class ModelBasedPolicy(object):
         """
         assert np.shape(state) == (self._state_dim,)
 
-        ### PROBLEM 2
-        ### YOUR CODE HERE
-        raise NotImplementedError
+        # Added: Use session to run the self._best_action operation
+        best_action = self._sess.run(self._best_action, {
+            self._state_ph: [state]  # Not using expand_dims because placeholder input cannot be a tensor
+        })
 
         assert np.shape(best_action) == (self._action_dim,)
         return best_action
+
+        # first_actions, seq_costs = self._sess.run(self._best_action, {
+        #     self._state_ph: [state]  # Not using expand_dims because placeholder input cannot be a tensor
+        # })
+        #
+        # print(first_actions)
+        # print(seq_costs)
+        # print(np.min(seq_costs))
