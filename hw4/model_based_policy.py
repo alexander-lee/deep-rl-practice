@@ -39,9 +39,10 @@ class ModelBasedPolicy(object):
                 (a) the placeholders should have 2 dimensions,
                     in which the 1st dimension is variable length (i.e., None)
         """
-        ### PROBLEM 1
-        ### YOUR CODE HERE
-        raise NotImplementedError
+        # Added: Placeholders
+        state_ph = tf.placeholder(shape=[None, self._state_dim], name="state", dtype=tf.float32)
+        action_ph = tf.placeholder(shape=[None, self._action_dim], name="ac", dtype=tf.float32)
+        next_state_ph = tf.placeholder(shape=[None, self._state_dim], name="next_state", dtype=tf.float32)
 
         return state_ph, action_ph, next_state_ph
 
@@ -63,10 +64,25 @@ class ModelBasedPolicy(object):
                     the predicted next state
 
         """
-        ### PROBLEM 1
-        ### YOUR CODE HERE
-        raise NotImplementedError
+        # Added: Implementation of dynamics function
+        dataset = self._init_dataset
+        state = tf.dtypes.cast(state, dtype=tf.float32)
+        action = tf.dtypes.cast(action, dtype=tf.float32)
 
+        normalized_state = utils.normalize(state, dataset.state_mean, dataset.state_std)
+        normalized_action = utils.normalize(action, dataset.action_mean, dataset.action_std)
+
+        state_action = tf.concat([normalized_state, normalized_action], axis=1)
+        normalized_pred_diff = utils.build_mlp(
+            input_layer=tf.dtypes.cast(state_action, dtype=tf.float32),
+            output_dim=self._state_dim,
+            scope="state_ac_nn",
+            n_layers=self._nn_layers,
+            reuse=reuse
+        )
+
+        pred_diff = utils.unnormalize(normalized_pred_diff, dataset.delta_state_mean, dataset.delta_state_std)
+        next_state_pred = state + pred_diff  # TODO: Could be unnormalize diff then add to normalized state
         return next_state_pred
 
     def _setup_training(self, state_ph, next_state_ph, next_state_pred):
@@ -87,9 +103,13 @@ class ModelBasedPolicy(object):
                 (d) Create the optimizer by minimizing the loss using the Adam optimizer with self._learning_rate
 
         """
-        ### PROBLEM 1
-        ### YOUR CODE HERE
-        raise NotImplementedError
+        # Added: Loss and Optimizer
+        dataset = self._init_dataset
+        state_diff = utils.normalize(next_state_ph - state_ph, dataset.state_mean, dataset.state_std)
+        pred_state_diff = utils.normalize(next_state_pred - state_ph, dataset.state_mean, dataset.state_std)
+
+        loss = tf.losses.mean_squared_error(tf.stop_gradient(state_diff), pred_state_diff)
+        optimizer = tf.train.AdamOptimizer(self._learning_rate).minimize(loss)
 
         return loss, optimizer
 
@@ -134,9 +154,11 @@ class ModelBasedPolicy(object):
         """
         sess = tf.Session()
 
-        ### PROBLEM 1
-        ### YOUR CODE HERE
-        raise NotImplementedError
+        # Added: Setup variables
+        state_ph, action_ph, next_state_ph = self._setup_placeholders()
+        next_state_pred = self._dynamics_func(state_ph, action_ph, reuse=tf.AUTO_REUSE)
+        loss, optimizer = self._setup_training(state_ph, next_state_ph, next_state_pred)
+
         ### PROBLEM 2
         ### YOUR CODE HERE
         best_action = None
@@ -144,7 +166,7 @@ class ModelBasedPolicy(object):
         sess.run(tf.global_variables_initializer())
 
         return sess, state_ph, action_ph, next_state_ph, \
-                next_state_pred, loss, optimizer, best_action
+            next_state_pred, loss, optimizer, best_action
 
     def train_step(self, states, actions, next_states):
         """
@@ -153,9 +175,12 @@ class ModelBasedPolicy(object):
         returns:
             loss: the loss from performing gradient descent
         """
-        ### PROBLEM 1
-        ### YOUR CODE HERE
-        raise NotImplementedError
+        # Added: Implementation for train_step
+        _, loss = self._sess.run([self._optimizer, self._loss], feed_dict={
+            self._state_ph: states,
+            self._action_ph: actions,
+            self._next_state_ph: next_states
+        })
 
         return loss
 
@@ -172,9 +197,13 @@ class ModelBasedPolicy(object):
         assert np.shape(state) == (self._state_dim,)
         assert np.shape(action) == (self._action_dim,)
 
-        ### PROBLEM 1
-        ### YOUR CODE HERE
-        raise NotImplementedError
+        # Added: Prediction implementation
+        next_state_pred = self._sess.run(self._dynamics_func(
+            tf.expand_dims(state, axis=0),
+            tf.expand_dims(action, axis=0),
+            reuse=tf.AUTO_REUSE
+        ))
+        next_state_pred = next_state_pred[0]  # Originally in a batch of size 1
 
         assert np.shape(next_state_pred) == (self._state_dim,)
         return next_state_pred

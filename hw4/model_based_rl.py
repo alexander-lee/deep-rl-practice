@@ -34,7 +34,6 @@ class ModelBasedRL(object):
         logger.info('Gathering random dataset')
         self._random_dataset = self._gather_rollouts(utils.RandomPolicy(env),
                                                      num_init_random_rollouts)
-
         logger.info('Creating policy')
         self._policy = ModelBasedPolicy(env,
                                         self._random_dataset,
@@ -83,9 +82,13 @@ class ModelBasedRL(object):
         timeit.start('train policy')
 
         losses = []
-        # PROBLEM 1
-        # YOUR CODE HERE
-        raise NotImplementedError
+        # Added: Training policy iteration
+        for epoch_num in range(self._training_epochs):
+            logger.info('Epoch %i' % (epoch_num + 1))
+            for batch_num, (states, actions, next_states, _, _) in enumerate(dataset.random_iterator(self._training_batch_size)):
+                loss = self._policy.train_step(states, actions, next_states)
+                losses.append(loss)
+                logger.info('\tLoss: {:.2f}'.format(loss))
 
         logger.record_tabular('TrainingLossStart', losses[0])
         logger.record_tabular('TrainingLossFinal', losses[-1])
@@ -115,17 +118,22 @@ class ModelBasedRL(object):
                   predicted states and saves these to the experiment's folder. You do not need to modify this code.
         """
         logger.info('Training policy....')
-        # PROBLEM 1
-        # YOUR CODE HERE
-        raise NotImplementedError
+
+        # Added: Call to _train_policy
+        self._train_policy(self._random_dataset)
 
         logger.info('Evaluating predictions...')
         for r_num, (states, actions, _, _, _) in enumerate(self._random_dataset.rollout_iterator()):
             pred_states = []
 
-            # PROBLEM 1
-            # YOUR CODE HERE
-            raise NotImplementedError
+            # Added: State prediction for each state in the rollout
+            curr_state = states[0]
+            pred_states.append(curr_state)
+
+            for action in actions:
+                # Take next step by following our policy
+                curr_state = self._policy.predict(curr_state, action)
+                pred_states.append(curr_state)
 
             states = np.asarray(states)
             pred_states = np.asarray(pred_states)
