@@ -46,10 +46,12 @@ class ModelBasedRL(object):
     def _gather_rollouts(self, policy, num_rollouts):
         dataset = utils.Dataset()
 
-        for _ in range(num_rollouts):
+        for r in range(num_rollouts):
             state = self._env.reset()
             done = False
             t = 0
+
+            logger.info('Gathering Rollout %d' % r)
             while not done:
                 if self._render:
                     timeit.start('render')
@@ -88,7 +90,7 @@ class ModelBasedRL(object):
             for batch_num, (states, actions, next_states, _, _) in enumerate(dataset.random_iterator(self._training_batch_size)):
                 loss = self._policy.train_step(states, actions, next_states)
                 losses.append(loss)
-                logger.info('\tLoss: {:.3f}'.format(loss))
+            logger.info('\tLoss: {:.3f}'.format(losses[-1]))
 
         logger.record_tabular('TrainingLossStart', losses[0])
         logger.record_tabular('TrainingLossFinal', losses[-1])
@@ -187,23 +189,18 @@ class ModelBasedRL(object):
         logger.record_tabular('Itr', itr)
         self._log(dataset)
 
-        for itr in range(self._num_onpolicy_iters + 1):
+        for itr in range(self._num_onpolicy_iters):
             logger.info('Iteration {0}'.format(itr))
             logger.record_tabular('Itr', itr)
 
-            # PROBLEM 3
-            # YOUR CODE HERE
+            # Added: Implementation for training and appending new rollouts
             logger.info('Training policy...')
-            raise NotImplementedError
+            self._train_policy(dataset)
 
-            # PROBLEM 3
-            # YOUR CODE HERE
             logger.info('Gathering rollouts...')
-            raise NotImplementedError
+            new_dataset = self._gather_rollouts(self._policy, self._num_onpolicy_rollouts)
 
-            # PROBLEM 3
-            # YOUR CODE HERE
             logger.info('Appending dataset...')
-            raise NotImplementedError
+            dataset.append(new_dataset)
 
             self._log(new_dataset)

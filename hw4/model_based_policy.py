@@ -248,11 +248,3 @@ class ModelBasedPolicy(object):
 
         assert np.shape(best_action) == (self._action_dim,)
         return best_action
-
-        # first_actions, seq_costs = self._sess.run(self._best_action, {
-        #     self._state_ph: [state]  # Not using expand_dims because placeholder input cannot be a tensor
-        # })
-        #
-        # print(first_actions)
-        # print(seq_costs)
-        # print(np.min(seq_costs))
