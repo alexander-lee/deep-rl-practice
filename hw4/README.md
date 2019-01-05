@@ -23,18 +23,18 @@
 | :---:  | :---:  |
 | 56.68 | 29.22 |
 
-![Half Cheetah Default](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw4/graphs/HalfCheetah_ModelBased?raw=true)
+![Half Cheetah Default](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw4/graphs/HalfCheetah_ModelBased.png?raw=true)
 
 ## Half Cheetah Hyperparameter Tuning
 ### Random Action Selection Size
 * The number of random action sequences taken before taking the best action
-![Half Cheetah Action Comparison](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw4/graphs/HalfCheetah_RandomActionComparison?raw=true)
+![Half Cheetah Action Comparison](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw4/graphs/HalfCheetah_RandomActionComparison.png?raw=true)
 
 ### Model Predictive Control (MPC) Horizon Size
 * The length of each action sequence (horizon) before taking the best action (similar to a lookahead)
-![Half Cheetah Horizon Comparison](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw4/graphs/HalfCheetah_HorizonComparison?raw=true)
+![Half Cheetah Horizon Comparison](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw4/graphs/HalfCheetah_HorizonComparison.png?raw=true)
 
 
 ### Number of Hidden Layers
 * The number of hidden layers in the dynamics prediction network
-![Half Cheetah Hidden Layers](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw4/graphs/HalfCheetah_LayerComparison?raw=true)
+![Half Cheetah Hidden Layers](https://github.com/alexander-lee/deep-rl-practice/blob/master/hw4/graphs/HalfCheetah_LayerComparison.png?raw=true)
